@@ -27,14 +27,9 @@ $(function() {
     }
   }
 
-  function TodoListView(listElement, model, hash) {
-    var todos = hash.decode({
-      "#/": model.allTodos,
-      "#/active": model.activeTodos,
-      "#/completed": model.completedTodos
-    })
-
-    model.clearCompleted.merge(hash.changes()).map(todos).onValue(function(todos) {
+  function TodoListView(listElement, model, selectedTodos, filterChanges) {
+    var repaint = model.clearCompleted.merge(filterChanges).merge(model.toggleCompleted)
+    repaint.map(selectedTodos).onValue(function(todos) {
       listElement.children().remove()
       _.each(todos, addTodo)
     })
@@ -66,13 +61,29 @@ $(function() {
     model.clearCompleted.plug(element.asEventStream("click"))
   }
 
-  function FilterView(element, hash) {
+  function ToggleAllView(element, model, selectedTodos) {
+    model.toggleCompleted.plug(selectedTodos.sampledBy(Bacon.UI.checkBoxValue(element).changes(), function(todos, completed) {
+      return { selectedTodos: todos, completed: completed }
+    }))
+  }
+
+  function FilterView(element, model) {
+    var hash = Bacon.UI.hash("#/")
+    var selectedTodos = hash.decode({
+      "#/": model.allTodos,
+      "#/active": model.activeTodos,
+      "#/completed": model.completedTodos
+    })
     hash.onValue(function(hash) {
       element.find("a").each(function() {
         var link = $(this)
         link.toggleClass("selected", link.attr("href") == hash)
       })
     })
+    return {
+      selectedTodos: selectedTodos,
+      changes: hash.changes()
+    }
   }
 
   function TodoCountView(element, model) {
@@ -83,15 +94,26 @@ $(function() {
     function update(todos, updatedTodo) {
       return _.map(todos, function(todo) { return todo.id === updatedTodo.id ? updatedTodo : todo })
     }
+    function toggleCompleted(todos, toggle) {
+      var ids = _.pluck(toggle.selectedTodos, "id")
+      return _.map(todos, function(todo) { 
+        if (_.contains(ids, todo.id)) {
+          return _.extend(_.clone(todo), { completed: toggle.completed })
+        }
+        return todo
+      })
+    }
 
     this.todoAdded = new Bacon.Bus()
     this.todoModified = new Bacon.Bus()
     this.clearCompleted = new Bacon.Bus()
+    this.toggleCompleted = new Bacon.Bus()
 
     todoChanges = this.todoAdded
                     .map(function(newTodo) { return function(todos) { return todos.concat([newTodo]) }})
                     .merge(this.clearCompleted.map(function() { return function(todos) { return _.where(todos, {completed : false})}}))
                     .merge(this.todoModified.map(function(todo) { return function(todos) { return update(todos, todo) }}))
+                    .merge(this.toggleCompleted.map(function(toggle) { return function(todos) { return toggleCompleted(todos, toggle)}}))
 
     this.allTodos = todoChanges.scan([], function(todos, f) { return f(todos) })
     this.activeTodos = this.allTodos.map(function(todos) { return _.where(todos, { completed: false})})
@@ -99,13 +121,13 @@ $(function() {
   }
 
   function TodoApp() {
-    var model = new TodoListModel()
-    var hash = Bacon.UI.hash("#/")
-    TodoListView($("#todo-list"), model, hash)
+    model = new TodoListModel()
+    var filter = FilterView($("#filters"), model)
+    TodoListView($("#todo-list"), model, filter.selectedTodos, filter.changes)
     NewTodoView($("#new-todo"), model)
     ClearCompletedView($("#clear-completed"), model)
     TodoCountView($("#todo-count"), model)
-    FilterView($("#filters"), hash)
+    ToggleAllView($("#toggle-all"), model, filter.selectedTodos)
   }
 
   TodoApp()
