@@ -27,15 +27,6 @@ $(function() {
     }
   }
 
-  function FilterView(element, hash) {
-    hash.onValue(function(hash) {
-      element.find("a").each(function() {
-        var link = $(this)
-        link.toggleClass("selected", link.attr("href") == hash)
-      })
-    })
-  }
-
   function TodoListView(listElement, model, hash) {
     var todos = hash.decode({
       "#/": model.allTodos,
@@ -75,6 +66,14 @@ $(function() {
     model.clearCompleted.plug(element.asEventStream("click"))
   }
 
+  function FilterView(element, hash) {
+    hash.onValue(function(hash) {
+      element.find("a").each(function() {
+        var link = $(this)
+        link.toggleClass("selected", link.attr("href") == hash)
+      })
+    })
+  }
 
   function TodoCountView(element, model) {
      model.activeTodos.map(".length").assign(element.find("strong"), "text")
