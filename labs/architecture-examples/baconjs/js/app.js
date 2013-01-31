@@ -4,6 +4,10 @@ $(function() {
     return element.asEventStream("keyup").filter(function(e) { return e.keyCode == KEYCODE_ENTER })
   }
 
+  function nonEmpty(xs) {
+    return xs.length > 0
+  }
+
   function TodoView(todo) {
     var todoTemplate = Handlebars.compile($("#todo-template").html())
     var todoElement = $(todoTemplate(todo))
@@ -57,9 +61,8 @@ $(function() {
   }
 
   function ClearCompletedView(element, model) {
-    var count = model.completedTodos.map(".length")
-    count.map(function(x) { return x != 0 }).assign(element, "toggle")
-    count.assign(element.find(".count"), "text")
+    model.completedTodos.map(nonEmpty).assign(element, "toggle")
+    model.completedTodos.map(".length").assign(element.find(".count"), "text")
     model.clearCompleted.plug(element.asEventStream("click"))
   }
 
@@ -132,6 +135,7 @@ $(function() {
     ClearCompletedView($("#clear-completed"), model)
     TodoCountView($("#todo-count"), model)
     ToggleAllView($("#toggle-all"), model, filter.selectedTodos)
+    model.allTodos.map(nonEmpty).assign($("#main,#footer"), "toggle")
   }
 
   TodoApp()
