@@ -21,7 +21,7 @@ $(function() {
 
     startEdit.onValue(function() {
       todoElement.addClass("editing")
-      $editor.focus()
+      $editor.select()
     })
     finishEdit.onValue(todoElement, "removeClass", "editing")
     title.assign($label, "text")
