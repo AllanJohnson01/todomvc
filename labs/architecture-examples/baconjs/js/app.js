@@ -27,15 +27,23 @@ $(function() {
     }
   }
 
-  function TodoListView(listElement, model) {
-    var selection = Bacon.UI.hash("#/")
-    var todos = selection.decode({
+  function FilterView(element, hash) {
+    hash.onValue(function(hash) {
+      element.find("a").each(function() {
+        var link = $(this)
+        link.toggleClass("selected", link.attr("href") == hash)
+      })
+    })
+  }
+
+  function TodoListView(listElement, model, hash) {
+    var todos = hash.decode({
       "#/": model.allTodos,
       "#/active": model.activeTodos,
       "#/completed": model.completedTodos
     })
 
-    model.clearCompleted.merge(selection.changes()).map(todos).onValue(function(todos) {
+    model.clearCompleted.merge(hash.changes()).map(todos).onValue(function(todos) {
       listElement.children().remove()
       _.each(todos, addTodo)
     })
@@ -93,10 +101,12 @@ $(function() {
 
   function TodoApp() {
     var model = new TodoListModel()
-    TodoListView($("#todo-list"), model)
+    var hash = Bacon.UI.hash("#/")
+    TodoListView($("#todo-list"), model, hash)
     NewTodoView($("#new-todo"), model)
     ClearCompletedView($("#clear-completed"), model)
     TodoCountView($("#todo-count"), model)
+    FilterView($("#filters"), hash)
   }
 
   TodoApp()
