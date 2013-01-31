@@ -57,7 +57,9 @@ $(function() {
   }
 
   function ClearCompletedView(element, model) {
-    model.completedTodos.map(function(todos) { return todos.length > 0 }).assign(element, "toggle")
+    var count = model.completedTodos.map(".length")
+    count.map(function(x) { return x != 0 }).assign(element, "toggle")
+    count.assign(element.find(".count"), "text")
     model.clearCompleted.plug(element.asEventStream("click"))
   }
 
