@@ -1,1 +1,4 @@
 /* base.css overrides */
+#main,#footer {
+  display: none;
+}
