@@ -16,7 +16,14 @@ $(function() {
     var title = Bacon.UI.textFieldValue($editor, todo.title)
     var completed = Bacon.UI.checkBoxValue(todoElement.find(".toggle"), todo.completed)
 
-    todoElement.asEventStream("dblclick").merge(enterKey($editor)).onValue(function() { todoElement.toggleClass("editing") })
+    var startEdit = $label.asEventStream("dblclick")
+    var finishEdit = enterKey($editor).merge($editor.asEventStream("blur")).merge($editor.asEventStream("dblclick"))
+
+    startEdit.onValue(function() {
+      todoElement.addClass("editing")
+      $editor.focus()
+    })
+    finishEdit.onValue(todoElement, "removeClass", "editing")
     title.assign($label, "text")
 
     var todoProperty = Bacon.combineTemplate({
