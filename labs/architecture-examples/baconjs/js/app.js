@@ -3,7 +3,7 @@ $(function() {
     var KEYCODE_ENTER = 13
     return element.asEventStream("keyup").filter(function(e) { return e.keyCode == KEYCODE_ENTER })
   }
-  
+
   function TodoView(todo) {
     var todoTemplate = Handlebars.compile($("#todo-template").html())
     var todoElement = $(todoTemplate(todo))
@@ -53,7 +53,6 @@ $(function() {
     }).sampledBy(newTodoId.changes())
     todoAdded.onValue(function() { element.val("") })
     model.todoAdded.plug(todoAdded)
-
   }
 
   function ClearCompletedView(element, model) {
