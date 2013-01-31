@@ -41,7 +41,7 @@ $(function() {
     function addTodo(todo) {
       var view = TodoView(todo)
       listElement.append(view.element)
-      model.todoModified.plug(view.changes)
+      model.todoModified.plug(view.changes.takeUntil(repaint))
     }
   }
 
