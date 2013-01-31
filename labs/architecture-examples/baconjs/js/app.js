@@ -87,7 +87,9 @@ $(function() {
   }
 
   function TodoCountView(element, model) {
-     model.activeTodos.map(".length").assign(element.find("strong"), "text")
+     model.activeTodos.map(".length").map(function(count) {
+       return "<strong>" + count + "</strong>" + ((count == 1) ? " item left" : " items left")
+     }).assign(element, "html")
   }
 
   function TodoListModel() {
