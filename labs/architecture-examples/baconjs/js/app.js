@@ -34,6 +34,7 @@ $(function() {
 
     return {
       changes: todoProperty.changes(),
+      destroy: todoElement.find(".destroy").asEventStream("click").doAction(".preventDefault").map(todoProperty),
       element: todoElement
     }
   }
@@ -44,7 +45,7 @@ $(function() {
       "#/active": model.activeTodos,
       "#/completed": model.completedTodos
     })
-    var repaint = model.clearCompleted.merge(hash.changes()).merge(model.toggleAll)
+    var repaint = model.clearCompleted.merge(hash.changes()).merge(model.toggleAll).merge(model.todoDeleted)
     repaint.map(selectedTodos).onValue(function(todos) {
       listElement.children().remove()
       _.each(todos, addTodo)
@@ -58,6 +59,7 @@ $(function() {
       var view = TodoView(todo)
       listElement.append(view.element)
       model.todoModified.plug(view.changes.takeUntil(repaint))
+      model.todoDeleted.plug(view.destroy.takeUntil(repaint))
     }
   }
 
@@ -98,25 +100,27 @@ $(function() {
   }
 
   function TodoListModel() {
-    function update(todos, updatedTodo) {
-      return _.map(todos, function(todo) { return todo.id === updatedTodo.id ? updatedTodo : todo })
-    }
     function toggleCompleted(todos, toggle) {
-      return _.map(todos, function(todo) { 
-        return _.extend(_.clone(todo), { completed: toggle })
-      })
-    }
+      return _.map(todos, function(todo) { return _.extend(_.clone(todo), { completed: toggle })})}
+    function toggleAll(toggle) { return function(todos) { return toggleCompleted(todos, toggle)}}
+    function modifyTodo(updatedTodo) { 
+      return function(todos) { return _.map(todos, function(todo) { return todo.id === updatedTodo.id ? updatedTodo : todo }) }}
+    function removeTodo(deletedTodo) { return function(todos) { return _.reject(todos, function(todo) { return todo.id === deletedTodo.id}) }}
+    function addTodo(newTodo) { return function(todos) { return todos.concat([newTodo]) }}
+    function clearCompleted() { return function(todos) { return _.where(todos, {completed : false})}} 
+
 
     this.todoAdded = new Bacon.Bus()
     this.todoModified = new Bacon.Bus()
+    this.todoDeleted = new Bacon.Bus()
     this.clearCompleted = new Bacon.Bus()
     this.toggleAll = new Bacon.Bus()
 
-    todoChanges = this.todoAdded
-                    .map(function(newTodo) { return function(todos) { return todos.concat([newTodo]) }})
-                    .merge(this.clearCompleted.map(function() { return function(todos) { return _.where(todos, {completed : false})}}))
-                    .merge(this.todoModified.map(function(todo) { return function(todos) { return update(todos, todo) }}))
-                    .merge(this.toggleAll.map(function(toggle) { return function(todos) { return toggleCompleted(todos, toggle)}}))
+    todoChanges = this.todoAdded.map(addTodo)
+                    .merge(this.todoDeleted.map(removeTodo))
+                    .merge(this.clearCompleted.map(clearCompleted))
+                    .merge(this.todoModified.map(modifyTodo))
+                    .merge(this.toggleAll.map(toggleAll))
 
     this.allTodos = todoChanges.scan([], function(todos, f) { return f(todos) })
     this.activeTodos = this.allTodos.map(function(todos) { return _.where(todos, { completed: false})})
