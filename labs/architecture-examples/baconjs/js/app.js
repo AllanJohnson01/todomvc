@@ -28,7 +28,14 @@ $(function() {
   }
 
   function TodoListView(listElement, model) {
-    model.clearCompleted.map(model.allTodos).onValue(function(todos) {
+    var selection = Bacon.UI.hash("#/")
+    var todos = selection.decode({
+      "#/": model.allTodos,
+      "#/active": model.activeTodos,
+      "#/completed": model.completedTodos
+    })
+
+    model.clearCompleted.merge(selection.changes()).map(todos).onValue(function(todos) {
       listElement.children().remove()
       _.each(todos, addTodo)
     })

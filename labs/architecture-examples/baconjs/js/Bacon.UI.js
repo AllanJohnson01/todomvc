@@ -56,4 +56,9 @@
     function isChecked() { return !!checkbox.attr("checked") }
     return checkbox.asEventStream("change").map(isChecked).toProperty(isChecked()).skipDuplicates()
   }
+  Bacon.UI.hash = function(defaultValue) {
+    if (defaultValue === undefined) defaultValue = ""
+    function getHash() { return !!document.location.hash ? document.location.hash : defaultValue }
+    return $(window).asEventStream("hashchange").map(getHash).toProperty(getHash()).skipDuplicates()
+  }
 })();
