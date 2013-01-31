@@ -15,7 +15,6 @@ $(function() {
     var $editor = todoElement.find(".edit")
     var title = Bacon.UI.textFieldValue($editor, todo.title)
     var completed = Bacon.UI.checkBoxValue(todoElement.find(".toggle"), todo.completed)
-
     var startEdit = $label.asEventStream("dblclick")
     var finishEdit = enterKey($editor).merge($editor.asEventStream("blur")).merge($editor.asEventStream("dblclick"))
 
@@ -46,14 +45,16 @@ $(function() {
       "#/completed": model.completedTodos
     })
     var repaint = model.clearCompleted.merge(hash.changes()).merge(model.toggleAll).merge(model.todoDeleted)
-    repaint.map(selectedTodos).onValue(function(todos) {
-      listElement.children().remove()
-      _.each(todos, addTodo)
-    })
+    repaint.merge(Bacon.once()).map(selectedTodos).onValue(render)
 
     model.todoAdded.onValue(function(todo) {
       addTodo(todo)
     })
+
+    function render(todos) {
+      listElement.children().remove()
+      _.each(todos, addTodo)
+    }
 
     function addTodo(todo) {
       var view = TodoView(todo)
@@ -64,12 +65,12 @@ $(function() {
   }
 
   function NewTodoView(element, model) {
-    var newTodoId = enterKey(element).scan(0, function(id,_) { return id + 1 })
+    var newTodoId = enterKey(element).map(function() { return new Date().getTime() })
     var todoAdded = Bacon.combineTemplate({ 
       id: newTodoId,
       title: Bacon.UI.textFieldValue(element),
       completed: false
-    }).sampledBy(newTodoId.changes())
+    }).sampledBy(newTodoId)
     todoAdded.onValue(function() { element.val("") })
     model.todoAdded.plug(todoAdded)
   }
@@ -99,6 +100,18 @@ $(function() {
      }).assign(element, "html")
   }
 
+  function LocalStorage() {
+    return {
+      readTodos: function() {
+        var stored = localStorage.getItem("todos-baconjs")
+        return stored != null ? JSON.parse(stored) : []
+      },
+      writeTodos: function(todos) {
+        localStorage.setItem("todos-baconjs", JSON.stringify(todos))
+      }
+    }
+  }
+
   function TodoListModel() {
     function toggleCompleted(todos, toggle) {
       return _.map(todos, function(todo) { return _.extend(_.clone(todo), { completed: toggle })})}
@@ -109,6 +122,7 @@ $(function() {
     function addTodo(newTodo) { return function(todos) { return todos.concat([newTodo]) }}
     function clearCompleted() { return function(todos) { return _.where(todos, {completed : false})}} 
 
+    var storage = LocalStorage()
 
     this.todoAdded = new Bacon.Bus()
     this.todoModified = new Bacon.Bus()
@@ -122,9 +136,11 @@ $(function() {
                     .merge(this.todoModified.map(modifyTodo))
                     .merge(this.toggleAll.map(toggleAll))
 
-    this.allTodos = todoChanges.scan([], function(todos, f) { return f(todos) })
+    this.allTodos = todoChanges.scan(storage.readTodos(), function(todos, f) { return f(todos) })
     this.activeTodos = this.allTodos.map(function(todos) { return _.where(todos, { completed: false})})
     this.completedTodos = this.allTodos.map(function(todos) { return _.where(todos, { completed: true})})
+
+    this.allTodos.changes().onValue(storage.writeTodos)
   }
 
   function TodoApp() {
