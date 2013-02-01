@@ -83,6 +83,7 @@ $(function() {
 
   function ToggleAllView(element, model) {
     model.toggleAll.plug(Bacon.UI.checkBoxValue(element).changes())
+    model.clearCompleted.map(false).assign(element, "attr", "checked")
   }
 
   function FilterView(element, hash) {
