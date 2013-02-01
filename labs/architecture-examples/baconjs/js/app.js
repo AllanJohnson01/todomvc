@@ -24,6 +24,7 @@ $(function() {
     })
     finishEdit.onValue(todoElement, "removeClass", "editing")
     title.assign($label, "text")
+    completed.assign(todoElement, "toggleClass", "completed")
 
     var todoProperty = Bacon.combineTemplate({
       id: todo.id,
