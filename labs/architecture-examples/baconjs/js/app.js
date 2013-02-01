@@ -68,9 +68,9 @@ $(function() {
     var newTodoId = enterKey(element).map(function() { return new Date().getTime() })
     var todoAdded = Bacon.combineTemplate({ 
       id: newTodoId,
-      title: Bacon.UI.textFieldValue(element),
+      title: Bacon.UI.textFieldValue(element).map(".trim"),
       completed: false
-    }).sampledBy(newTodoId)
+    }).sampledBy(newTodoId).filter(".title")
     todoAdded.onValue(function() { element.val("") })
     model.todoAdded.plug(todoAdded)
   }
