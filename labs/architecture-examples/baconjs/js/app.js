@@ -106,7 +106,7 @@ $(function() {
     return {
       readTodos: function() {
         var stored = localStorage.getItem("todos-baconjs")
-        return stored != null ? JSON.parse(stored) : []
+        return stored!=null ? JSON.parse(stored) : []
       },
       writeTodos: function(todos) {
         localStorage.setItem("todos-baconjs", JSON.stringify(todos))
@@ -117,12 +117,6 @@ $(function() {
   function TodoListModel() {
     function toggleCompleted(todos, toggle) {
       return _.map(todos, function(todo) { return _.extend(_.clone(todo), { completed: toggle })})}
-    function toggleAll(toggle) { return function(todos) { return toggleCompleted(todos, toggle)}}
-    function modifyTodo(updatedTodo) { 
-      return function(todos) { return _.map(todos, function(todo) { return todo.id === updatedTodo.id ? updatedTodo : todo }) }}
-    function removeTodo(deletedTodo) { return function(todos) { return _.reject(todos, function(todo) { return todo.id === deletedTodo.id}) }}
-    function addTodo(newTodo) { return function(todos) { return todos.concat([newTodo]) }}
-    function clearCompleted() { return function(todos) { return _.where(todos, {completed : false})}} 
 
     var storage = LocalStorage()
 
@@ -132,13 +126,15 @@ $(function() {
     this.clearCompleted = new Bacon.Bus()
     this.toggleAll = new Bacon.Bus()
 
-    todoChanges = this.todoAdded.map(addTodo)
-                    .merge(this.todoDeleted.map(removeTodo))
-                    .merge(this.clearCompleted.map(clearCompleted))
-                    .merge(this.todoModified.map(modifyTodo))
-                    .merge(this.toggleAll.map(toggleAll))
+    this.allTodos = Bacon.update(
+      storage.readTodos(),
+      [this.todoAdded], function(todos, todo) { return todos.concat([todo])},
+      [this.todoDeleted], function(todos, deletedTodo) { return _.reject(todos, function(todo) { return todo.id === deletedTodo.id})},
+      [this.clearCompleted], function(todos) { return _.where(todos, {completed : false})},
+      [this.todoModified], function(todos, updatedTodo) { return _.map(todos, function(todo) { return todo.id === updatedTodo.id ? updatedTodo : todo }) },
+      [this.toggleAll], function(todos, toggle) { return _.map(todos, function(todo) { return _.extend(_.clone(todo), { completed: toggle })})}
+    )
 
-    this.allTodos = todoChanges.scan(storage.readTodos(), function(todos, f) { return f(todos) })
     this.activeTodos = this.allTodos.map(function(todos) { return _.where(todos, { completed: false})})
     this.completedTodos = this.allTodos.map(function(todos) { return _.where(todos, { completed: true})})
 
@@ -158,4 +154,4 @@ $(function() {
   }
 
   TodoApp()
-})
+});
