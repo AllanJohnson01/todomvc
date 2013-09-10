@@ -115,9 +115,6 @@ $(function() {
   }
 
   function TodoListModel() {
-    function toggleCompleted(todos, toggle) {
-      return _.map(todos, function(todo) { return _.extend(_.clone(todo), { completed: toggle })})}
-
     var storage = LocalStorage()
 
     this.todoAdded = new Bacon.Bus()
